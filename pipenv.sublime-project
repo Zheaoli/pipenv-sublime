@@ -1,0 +1,9 @@
+{
+    "build_systems":
+    [
+        {
+            "name": "Update Pipenv Packages",
+            "target": "PipenvUpdate"
+        }
+    ]
+}
