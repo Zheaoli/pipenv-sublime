@@ -31,11 +31,38 @@ class InstallHandler(sublime_plugin.ListInputHandler):
     def next_input(self, *args):
         return None
 
-    # def placeholder(self):
-    #     return "package-name"
+    def placeholder(self):
+        return "package-name"
 
     def description(self, *args):
         return "Package to install."
+
+
+class UninstallHandler(sublime_plugin.ListInputHandler):
+    """docstring for ClassName"""
+
+    def __init__(self):
+        super(InstallHandler, self).__init__()
+
+    def _return_packages(self):
+        home = os.path.basename(sublime.View().file_name())
+        print(sublime.current.file_name)
+
+        p = pipenvlib.PipenvProject(home)
+        return [p.name for p in (p.dev_packages + p.packages)]
+
+
+    def list_items(self):
+        return [p for p in self._return_packages()]
+
+    def next_input(self, *args):
+        return None
+
+    def placeholder(self):
+        return "package-name"
+
+    def description(self, *args):
+        return "Package to uninstall."
 
 
 class pipenv_install(sublime_plugin.WindowCommand):
@@ -51,7 +78,7 @@ class pipenv_install(sublime_plugin.WindowCommand):
         return "Pipenv is awesome"
 
     def input(self, *args):
-        return InstallHandler()
+        return UninstallHandler()
 
     def run(self, install_handler):
         # The package to install.
@@ -65,15 +92,30 @@ class pipenv_install(sublime_plugin.WindowCommand):
         print(p._run('install {}', package))
 
 
+class pipenv_uninstall(sublime_plugin.WindowCommand):
+    """docstring for PipenvMenu"""
 
-class ListPackagesCommand(sublime_plugin.WindowCommand):
+    def __init__(self, text):
+        super(pipenv_uninstall, self).__init__(text)
 
-    """
-    A command that shows a list of all installed packages in the quick panel
-    """
+    def is_enabled(self):
+        return True
 
-    def run(self):
-        ListPackagesThread(self.window).start()
+    def description(self):
+        return "Pipenv is awesome"
+
+    def input(self, *args):
+        return UninstallHandler()
+
+    def run(self, uninstall_handler=None):
+        # The package to install.
+        package = uninstall_handler
+
+        # The home directory for the current file name.
+        home = os.path.basename(sublime.Window.active_view(sublime.active_window()).file_name())
+
+        p = pipenvlib.PipenvProject(home)
+        print(p.packages + p.dev_packages)
 
 
 if sublime.version() < '3000':
