@@ -21,6 +21,7 @@ class InstallHandler(sublime_plugin.ListInputHandler):
         super(InstallHandler, self).__init__()
 
     def _yield_packages(self):
+        sublime.status_message("Fetching Package names from PyPi…")
         r = requests.get('https://pypi.python.org/simple/')
         for result in parse.findall(TEMPLATE, r.text):
             yield result[0]
@@ -60,7 +61,17 @@ class pipenv_install(sublime_plugin.WindowCommand):
         # The home directory for the current file name.
         home = os.path.dirname(sublime.active_window().active_view().file_name())
         p = pipenvlib.PipenvProject(home)
-        print(p._run('install {}'.format(package)))
+
+        # Update package status.
+        sublime.status_message("Installing {} with Pipenv…".format(package))
+
+        sublime.run_command('show_panel', {'panel': 'console'})
+        print()
+        print(p._run('install {}'.format(package)).out)
+        # Show a new window.
+
+        # Print the output of the installation.
+
 
 
 if sublime.version() < '3000':
