@@ -90,6 +90,7 @@ class InstallHandler(sublime_plugin.ListInputHandler):
     def initial_text(self, *args):
         return ""
 
+
 class pipenv_install(PipenvIsEnabledMixin, sublime_plugin.WindowCommand):
 
     def __init__(self, text):
@@ -117,6 +118,64 @@ class pipenv_install(PipenvIsEnabledMixin, sublime_plugin.WindowCommand):
 
         # Run the install command.
         c = p.run('install {}'.format(package), block=False)
+
+        # Update the status bar.
+        sublime.status_message("Waiting for {!r} to install…".format(package))
+
+        # Block on subprocess…
+        c.block()
+
+        # Print results to console.
+        print(c.out)
+
+        # Assure that the intallation was successful.
+        try:
+            # Ensure installation was successful.
+            assert c.return_code == 0
+
+            # Update the status bar.
+            sublime.status_message("Success installing {!r}!".format(package))
+
+            # Open the Pipfile.
+            sublime.active_window().active_view().window().open_file('Pipfile')
+
+            # Hide the console.
+            sublime.active_window().active_view().window().run_command('hide_panel', {'panel': 'console'})
+        except AssertionError:
+            # Update the status bar.
+            sublime.status_message("Error installing {!r}!".format(package))
+
+            # Report the error.
+            print(c.err)
+
+
+class pipenv_install_dev(PipenvIsEnabledMixin, sublime_plugin.WindowCommand):
+
+    def __init__(self, text):
+        super(pipenv_install_dev, self).__init__(text)
+
+    # def is_enabled(self):
+    #     return super(pipenv_install, self).is_enabled()
+
+    def input(self, *args):
+        return InstallHandler()
+
+    def run(self, install_handler):
+        # The package to install.
+        package = install_handler
+
+        # The home directory for the current file name.
+        home = os.path.dirname(sublime.active_window().active_view().file_name())
+        p = pipenvlib.PipenvProject(home)
+
+        # Update package status.
+        sublime.status_message("Installing {!r} with Pipenv…".format(package))
+
+        # Show the console.
+        sublime.active_window().active_view().window().run_command('show_panel', {'panel': 'console'})
+
+        # Run the install command.
+        c = p.run('install --dev {}'.format(package), block=False)
 
         # Update the status bar.
         sublime.status_message("Waiting for {!r} to install…".format(package))
