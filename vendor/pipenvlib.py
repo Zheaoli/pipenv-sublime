@@ -166,9 +166,9 @@ class PipenvProject(object):
 
         return [l for l in gen()]
 
-    def _run(self, cmd):
+    def run(self, cmd, block=True):
         """Run a Pipenv command for the Pipenv project."""
-        return delegator.run('pipenv {0}'.format(cmd), cwd=self.home)
+        return delegator.run('pipenv {0}'.format(cmd), cwd=self.home, block=block)
 
     def install(self, package_name, constraint=None, dev=False):
         """Installs a given package to the Pipenv project."""
@@ -185,12 +185,12 @@ class PipenvProject(object):
     def uninstall(self, package_name):
         """Uninstalls a given package from the Pipenv project."""
 
-        return self._run('uninstall {0}'.format(package_name)).return_code == 0
+        return self.run('uninstall {0}'.format(package_name)).return_code == 0
 
     def check(self):
         """Runs Pipenv check on the Pipenv project."""
-        return self._run('check').return_code == 0
+        return self.run('check').return_code == 0
 
     @property
     def virtualenv_location(self):
-        return self._run('--venv').out.strip()
+        return self.run('--venv').out.strip()

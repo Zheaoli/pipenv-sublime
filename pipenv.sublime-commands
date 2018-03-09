@@ -1,4 +1,4 @@
 [
-	{ "caption": "Pipenv: Install Package", "command": "pipenv_install" },
-	{ "caption": "Pipenv: Uninstall Package", "command": "pipenv_uninstall" }
+	// { "caption": "Pipenv: Install Package", "command": "pipenv_install" },
+	// { "caption": "Pipenv: Uninstall Package", "command": "pipenv_uninstall" }
 ]

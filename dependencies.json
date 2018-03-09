@@ -1,7 +1,7 @@
 {
     "*": {
         ">=3000": [
-            "requests"
+            "requests",
             "parse"
         ]
     }
