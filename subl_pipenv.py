@@ -15,6 +15,23 @@ def plugin_loaded():
     pass
 
 
+class PipenvIsEnabledMixin:
+
+    def is_enabled(self):
+        open_files = [view.file_name() for view in sublime.active_window().views()]
+
+        for o_f in open_files:
+            o_f = os.path.abspath(o_f)
+            dirname = os.path.dirname(o_f)
+            dirname = os.path.sep.join([dirname, '..', '..'])
+
+            for root, dirs, files in os.walk(dirname, followlinks=True):
+                if 'Pipfile' in files:
+                    return True
+
+        return False
+
+
 class InstallHandler(sublime_plugin.ListInputHandler):
 
     def __init__(self):
@@ -73,22 +90,13 @@ class InstallHandler(sublime_plugin.ListInputHandler):
     def initial_text(self, *args):
         return ""
 
-class pipenv_install(sublime_plugin.WindowCommand):
+class pipenv_install(PipenvIsEnabledMixin, sublime_plugin.WindowCommand):
 
     def __init__(self, text):
         super(pipenv_install, self).__init__(text)
 
-    def is_enabled(self):
-        open_files = [view.file_name() for view in sublime.active_window().views()]
-
-        for o_f in open_files:
-            o_f = os.path.abspath(o_f)
-            dirname = os.path.dirname(o_f)
-            dirname = os.path.sep.join([dirname, '..', '..'])
-
-            for root, dirs, files in os.walk(dirname, followlinks=True):
-                if 'Pipfile' in files:
-                    return True
+    # def is_enabled(self):
+    #     return super(pipenv_install, self).is_enabled()
 
     def input(self, *args):
         return InstallHandler()
@@ -155,22 +163,13 @@ class UninstallHandler(sublime_plugin.ListInputHandler):
         return ""
 
 
-class pipenv_uninstall(sublime_plugin.WindowCommand):
+class pipenv_uninstall(PipenvIsEnabledMixin, sublime_plugin.WindowCommand):
 
     def __init__(self, text):
         super(pipenv_uninstall, self).__init__(text)
 
-    def is_enabled(self):
-        open_files = [view.file_name() for view in sublime.active_window().views()]
-
-        for o_f in open_files:
-            o_f = os.path.abspath(o_f)
-            dirname = os.path.dirname(o_f)
-            dirname = os.path.sep.join([dirname, '..', '..'])
-
-            for root, dirs, files in os.walk(dirname, followlinks=True):
-                if 'Pipfile' in files:
-                    return True
+    # def is_enabled(self):
+    #     return super(pipenv_uninstall, self).is_enabled()
 
     def input(self, *args):
         return UninstallHandler()
@@ -222,71 +221,77 @@ class pipenv_uninstall(sublime_plugin.WindowCommand):
             print(c.err)
 
 
-class pipenv_open_pipfile(sublime_plugin.WindowCommand):
+
+class pipenv_open_pipfile(PipenvIsEnabledMixin, sublime_plugin.WindowCommand):
 
     def __init__(self, text):
         super(pipenv_open_pipfile, self).__init__(text)
 
+    # def is_enabled(self):
+    #     return super(pipenv_open_pipfile, self).is_enabled()
+
+    def run(self):
+        # Update package status.
+        sublime.status_message("Opening {!r} with Pipenv…".format('Pipfile'))
+
+        # Open the Pipfile.
+        sublime.active_window().active_view().window().open_file('Pipfile')
+
+
+class pipenv_open_pipfile_lock(PipenvIsEnabledMixin, sublime_plugin.WindowCommand):
+
+    def __init__(self, text):
+        super(pipenv_open_pipfile_lock, self).__init__(text)
+
     def is_enabled(self):
-        open_files = [view.file_name() for view in sublime.active_window().views()]
+        return super(pipenv_open_pipfile_lock, self).is_enabled()
 
-        for o_f in open_files:
-            o_f = os.path.abspath(o_f)
-            dirname = os.path.dirname(o_f)
-            dirname = os.path.sep.join([dirname, '..', '..'])
+    def run(self):
+        # Update package status.
+        sublime.status_message("Opening {!r} with Pipenv…".format('Pipfile.lock'))
 
-            for root, dirs, files in os.walk(dirname, followlinks=True):
-                if 'Pipfile' in files:
-                    return True
+        # Open the Pipfile.
+        sublime.active_window().active_view().window().open_file('Pipfile.lock')
 
-    def input(self, *args):
-        return UninstallHandler()
 
-    def run(self, uninstall_handler):
-        # The package to install.
-        package = uninstall_handler
+class pipenv_lock(PipenvIsEnabledMixin, sublime_plugin.WindowCommand):
 
-        # The home directory for the current file name.
+    def __init__(self, text):
+        super(pipenv_lock, self).__init__(text)
+
+    # def is_enabled(self):
+    #     return super(pipenv_lock, self).is_enabled()
+
+    def run(self):
+        # Update package status.
+        sublime.status_message("Locking {!r} with Pipenv…".format('Pipfile'))
+
         home = os.path.dirname(sublime.active_window().active_view().file_name())
         p = pipenvlib.PipenvProject(home)
 
-        # Update package status.
-        sublime.status_message("Un–installing {!r} with Pipenv…".format(package))
-
-        # Show the console.
-        sublime.active_window().active_view().window().run_command('show_panel', {'panel': 'console'})
-
-        # Run the uninstall command.
-        c = p.run('uninstall {}'.format(package), block=False)
-
-        # Update the status bar.
-        sublime.status_message("Waiting for {!r} to un–install…".format(package))
-
-        # Block on subprocess…
+        c = p.run('lock', block=False)
         c.block()
 
-        # Print results to console.
-        print(c.out)
-
-        # Assure that the intallation was successful.
         try:
-            # Ensure installation was successful.
             assert c.return_code == 0
 
-            # Update the status bar.
-            sublime.status_message("Success un–installing {!r}!".format(package))
+            # Update locking status.
+            sublime.status_message("Success!")
 
             # Open the Pipfile.
-            sublime.active_window().active_view().window().open_file('Pipfile')
+            sublime.active_window().active_view().window().open_file('Pipfile.lock')
+            sublime.status_message("")
 
-            # Hide the console.
-            sublime.active_window().active_view().window().run_command('hide_panel', {'panel': 'console'})
         except AssertionError:
-            # Update the status bar.
-            sublime.status_message("Error un–installing {!r}!".format(package))
+            # Show the console.
+            sublime.active_window().active_view().window().run_command('show_panel', {'panel': 'console'})
 
-            # Report the error.
+            # Update locking status.
+            sublime.status_message("Error while locking!")
             print(c.err)
 
-if sublime.version() < '3000':
-    plugin_loaded()
+
+if __name__ == '__main__':
+    if sublime.version() < '3000':
+        plugin_loaded()
+

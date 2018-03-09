@@ -1,4 +1,7 @@
 [
 	{ "caption": "Pipenv: Install Package", "command": "pipenv_install" },
-	{ "caption": "Pipenv: Uninstall Package", "command": "pipenv_uninstall" }
+	{ "caption": "Pipenv: Uninstall Package", "command": "pipenv_uninstall" },
+	{ "caption": "Pipenv: Open Pipfile", "command": "pipenv_open_pipfile" },
+	{ "caption": "Pipenv: Open Pipfile.lock", "command": "pipenv_open_pipfile_lock" },
+	{ "caption": "Pipenv: Lock", "command": "pipenv_lock" }
 ]
