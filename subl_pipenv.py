@@ -222,5 +222,71 @@ class pipenv_uninstall(sublime_plugin.WindowCommand):
             print(c.err)
 
 
+class pipenv_open_pipfile(sublime_plugin.WindowCommand):
+
+    def __init__(self, text):
+        super(pipenv_open_pipfile, self).__init__(text)
+
+    def is_enabled(self):
+        open_files = [view.file_name() for view in sublime.active_window().views()]
+
+        for o_f in open_files:
+            o_f = os.path.abspath(o_f)
+            dirname = os.path.dirname(o_f)
+            dirname = os.path.sep.join([dirname, '..', '..'])
+
+            for root, dirs, files in os.walk(dirname, followlinks=True):
+                if 'Pipfile' in files:
+                    return True
+
+    def input(self, *args):
+        return UninstallHandler()
+
+    def run(self, uninstall_handler):
+        # The package to install.
+        package = uninstall_handler
+
+        # The home directory for the current file name.
+        home = os.path.dirname(sublime.active_window().active_view().file_name())
+        p = pipenvlib.PipenvProject(home)
+
+        # Update package status.
+        sublime.status_message("Un–installing {!r} with Pipenv…".format(package))
+
+        # Show the console.
+        sublime.active_window().active_view().window().run_command('show_panel', {'panel': 'console'})
+
+        # Run the uninstall command.
+        c = p.run('uninstall {}'.format(package), block=False)
+
+        # Update the status bar.
+        sublime.status_message("Waiting for {!r} to un–install…".format(package))
+
+        # Block on subprocess…
+        c.block()
+
+        # Print results to console.
+        print(c.out)
+
+        # Assure that the intallation was successful.
+        try:
+            # Ensure installation was successful.
+            assert c.return_code == 0
+
+            # Update the status bar.
+            sublime.status_message("Success un–installing {!r}!".format(package))
+
+            # Open the Pipfile.
+            sublime.active_window().active_view().window().open_file('Pipfile')
+
+            # Hide the console.
+            sublime.active_window().active_view().window().run_command('hide_panel', {'panel': 'console'})
+        except AssertionError:
+            # Update the status bar.
+            sublime.status_message("Error un–installing {!r}!".format(package))
+
+            # Report the error.
+            print(c.err)
+
 if sublime.version() < '3000':
     plugin_loaded()
