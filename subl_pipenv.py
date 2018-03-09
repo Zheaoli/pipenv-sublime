@@ -14,8 +14,8 @@ ALL_PACKAGES = list()
 def plugin_loaded():
     pass
 
+
 class InstallHandler(sublime_plugin.ListInputHandler):
-    """docstring for ClassName"""
 
     def __init__(self):
         super(InstallHandler, self).__init__()
@@ -71,8 +71,7 @@ class InstallHandler(sublime_plugin.ListInputHandler):
         return self.all_packages
 
     def initial_text(self, *args):
-        return "requests"
-
+        return ""
 
 class pipenv_install(sublime_plugin.WindowCommand):
 
@@ -90,11 +89,6 @@ class pipenv_install(sublime_plugin.WindowCommand):
             for root, dirs, files in os.walk(dirname, followlinks=True):
                 if 'Pipfile' in files:
                     return True
-
-
-    def description(self):
-        # return "Pipenv is awesome"
-        return ""
 
     def input(self, *args):
         return InstallHandler()
@@ -145,6 +139,87 @@ class pipenv_install(sublime_plugin.WindowCommand):
             # Report the error.
             print(c.err)
 
+
+class UninstallHandler(sublime_plugin.ListInputHandler):
+
+    def __init__(self):
+        super(UninstallHandler, self).__init__()
+
+    def list_items(self):
+        home = os.path.dirname(sublime.active_window().active_view().file_name())
+        p = pipenvlib.PipenvProject(home)
+
+        return list(set([p.name for p in p.packages + p.dev_packages]))
+
+    def initial_text(self, *args):
+        return ""
+
+
+class pipenv_uninstall(sublime_plugin.WindowCommand):
+
+    def __init__(self, text):
+        super(pipenv_uninstall, self).__init__(text)
+
+    def is_enabled(self):
+        open_files = [view.file_name() for view in sublime.active_window().views()]
+
+        for o_f in open_files:
+            o_f = os.path.abspath(o_f)
+            dirname = os.path.dirname(o_f)
+            dirname = os.path.sep.join([dirname, '..', '..'])
+
+            for root, dirs, files in os.walk(dirname, followlinks=True):
+                if 'Pipfile' in files:
+                    return True
+
+    def input(self, *args):
+        return UninstallHandler()
+
+    def run(self, uninstall_handler):
+        # The package to install.
+        package = uninstall_handler
+
+        # The home directory for the current file name.
+        home = os.path.dirname(sublime.active_window().active_view().file_name())
+        p = pipenvlib.PipenvProject(home)
+
+        # Update package status.
+        sublime.status_message("Un–installing {!r} with Pipenv…".format(package))
+
+        # Show the console.
+        sublime.active_window().active_view().window().run_command('show_panel', {'panel': 'console'})
+
+        # Run the uninstall command.
+        c = p.run('uninstall {}'.format(package), block=False)
+
+        # Update the status bar.
+        sublime.status_message("Waiting for {!r} to un–install…".format(package))
+
+        # Block on subprocess…
+        c.block()
+
+        # Print results to console.
+        print(c.out)
+
+        # Assure that the intallation was successful.
+        try:
+            # Ensure installation was successful.
+            assert c.return_code == 0
+
+            # Update the status bar.
+            sublime.status_message("Success un–installing {!r}!".format(package))
+
+            # Open the Pipfile.
+            sublime.active_window().active_view().window().open_file('Pipfile')
+
+            # Hide the console.
+            sublime.active_window().active_view().window().run_command('hide_panel', {'panel': 'console'})
+        except AssertionError:
+            # Update the status bar.
+            sublime.status_message("Error un–installing {!r}!".format(package))
+
+            # Report the error.
+            print(c.err)
 
 
 if sublime.version() < '3000':
