@@ -70,29 +70,31 @@ class InstallHandler(sublime_plugin.ListInputHandler):
     def list_items(self):
         return self.all_packages
 
-    def next_input(self, *args):
-        return None
-
-    def placeholder(self):
-        # return "package-name"
-        pass
-
-    def description(self, *args):
-        # return "Package to install."
-        pass
+    def initial_text(self, *args):
+        return "requests"
 
 
 class pipenv_install(sublime_plugin.WindowCommand):
-    """docstring for PipenvMenu"""
 
     def __init__(self, text):
         super(pipenv_install, self).__init__(text)
 
     def is_enabled(self):
-        return True
+        open_files = [view.file_name() for view in sublime.active_window().views()]
+
+        for o_f in open_files:
+            o_f = os.path.abspath(o_f)
+            dirname = os.path.dirname(o_f)
+            dirname = os.path.sep.join([dirname, '..', '..'])
+
+            for root, dirs, files in os.walk(dirname, followlinks=True):
+                if 'Pipfile' in files:
+                    return True
+
 
     def description(self):
-        return "Pipenv is awesome"
+        # return "Pipenv is awesome"
+        return ""
 
     def input(self, *args):
         return InstallHandler()
@@ -108,21 +110,41 @@ class pipenv_install(sublime_plugin.WindowCommand):
         # Update package status.
         sublime.status_message("Installing {!r} with Pipenv…".format(package))
 
-        sublime.run_command('show_panel', {'panel': 'console'})
-        print()
-        c = p._run('install {}'.format(package))
-        # sublime.status_message("Waiting for {!r} to install…".format(package))
-        # c.block()
+        # Show the console.
+        sublime.active_window().active_view().window().run_command('show_panel', {'panel': 'console'})
 
-        assert c.return_code == 0
-        sublime.status_message("Success installing {!r}!".format(package))
+        # Run the install command.
+        c = p.run('install {}'.format(package), block=False)
 
-        sublime.active_window().active_view().window().open_file('Pipfile')
-        # sublime.open('Pipfile')
-        # Show a new window.
+        # Update the status bar.
+        sublime.status_message("Waiting for {!r} to install…".format(package))
 
+        # Block on subprocess…
+        c.block()
 
-        # Print the output of the installation.
+        # Print results to console.
+        print(c.out)
+
+        # Assure that the intallation was successful.
+        try:
+            # Ensure installation was successful.
+            assert c.return_code == 0
+
+            # Update the status bar.
+            sublime.status_message("Success installing {!r}!".format(package))
+
+            # Open the Pipfile.
+            sublime.active_window().active_view().window().open_file('Pipfile')
+
+            # Hide the console.
+            sublime.active_window().active_view().window().run_command('hide_panel', {'panel': 'console'})
+        except AssertionError:
+            # Update the status bar.
+            sublime.status_message("Error installing {!r}!".format(package))
+
+            # Report the error.
+            print(c.err)
+
 
 
 if sublime.version() < '3000':
